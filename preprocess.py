@@ -1,8 +1,7 @@
-import torch
-from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+import json
 
 DATA_DIR = './data/'
 RAW = ['user_id', 'click']
@@ -38,23 +37,39 @@ def initialize_data():
     return num_users
 
 
-class UserInter(Dataset):
-    def __init__(self):
-        data = pd.read_csv(DATA_DIR + 'preprocessed/train_interaction.csv')
-        self.data = data
+def face_reader(file_path):
+    data = {}
+    with open(file_path, 'r') as f:
+        for line in f:
+            photo_id, json_serials = line.strip().split('\t')
+            photo_id = int(photo_id)
+            if photo_id in data.keys():
+                assert ValueError("Photo_id {} appears again in {} .".format(photo_id, file_path))
+            else:
+                if json_serials != '0':
+                    faces = json.loads(json_serials)
+                    data[photo_id] = faces
+    return data
 
-    def __getitem__(self, item):
-        data = self.data.loc[item]
-        user_id = torch.from_numpy(np.array(data['user_id']))
-        click = torch.from_numpy(np.array(data['click']))
-        photo_id = data['photo_id']
-        photo_path = DATA_DIR + 'train/preliminary_visual_train/' + str(photo_id)
-        visual_feature = torch.from_numpy(np.load(photo_path).squeeze())
-        return [user_id, visual_feature, click]
 
-    def __len__(self):
-        return len(self.data)
+def initialize_face_data():
+    train_data = face_reader('./data/train/train_face.txt')
+    test_data = face_reader('./data/test/test_face.txt')
+    data = dict(train_data, **test_data)
+
+    array = []
+    for _, values in data.items():
+        array.extend(values)
+    array = np.array(array)[:, [0, 2]]
+    print("Data array shape: {}".format(array.shape))
+    print(array)
+
+    scaler = StandardScaler()
+    array = scaler.fit_transform(array)
+    print(array)
+    print(array.mean(axis=0))
+    print(array.std(axis=0))
 
 
 if __name__ == "__main__":
-    initialize_data()
+    initialize_face_data()
