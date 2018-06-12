@@ -25,14 +25,14 @@ class UserInter(Dataset):
         if photo_id in self.face_data.keys():
             face_raw = self.face_data[photo_id]
         else:
-            face_raw = [0, 0, 0, 0]
+            face_raw = [0, 0, 0, 20]
         scale = torch.Tensor([face_raw[0]])
         gender = torch.LongTensor([face_raw[1]])
         age = torch.Tensor([face_raw[2]])
-        perp = torch.LongTensor([face_raw[3]])
+        perp = torch.LongTensor([face_raw[3] - 20])
 
         return {'user_id': user_id, 'visual': visual_feature, 'click': click, 'scale': scale, 'gender': gender,
-                'age': age, 'prep': perp}
+                'age': age, 'perp': perp}
 
     def __len__(self):
         return len(self.data)

@@ -4,7 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from model import IfClick
-from preprocess import UserInter
+from dataset import UserInter
 import opts
 
 from misc.logger import Logger
@@ -32,11 +32,11 @@ if __name__ == "__main__":
 
             scale = data['scale'].cuda()
             gender = data['gender'].cuda()
-            age = data['age']
-            perp = data['perp']
+            age = data['age'].cuda()
+            perp = data['perp'].cuda()
 
             # compute loss and backward gradient
-            pred = ifClick(user_id, visual)
+            pred = ifClick(user_id, visual, scale, gender, age, perp)
             loss = criterion(pred, click)
             ifClick.zero_grad()
             loss.backward()
