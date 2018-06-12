@@ -55,20 +55,42 @@ def face_reader(file_path):
 def initialize_face_data():
     train_data = face_reader('./data/train/train_face.txt')
     test_data = face_reader('./data/test/test_face.txt')
-    data = dict(train_data, **test_data)
+
+    data = train_data.copy()
+    data.update(test_data)
 
     array = []
-    for _, values in data.items():
-        array.extend(values)
+    for key, values in data.items():
+        # max scale index
+        idx = 0
+        for i, value in enumerate(values):
+            if value[0] > values[idx][0]:
+                idx = i
+        data[key] = values[idx]
+        array.append(values[idx])
+
+    assert len(data.items()) == len(array)
     array = np.array(array)[:, [0, 2]]
     print("Data array shape: {}".format(array.shape))
-    print(array)
 
-    scaler = StandardScaler()
-    array = scaler.fit_transform(array)
-    print(array)
-    print(array.mean(axis=0))
-    print(array.std(axis=0))
+    mean = array.mean(axis=0)
+    std = array.std(axis=0)
+    print("Mean and Std:{}, {}".format(mean, std))
+
+    with open('./data/preprocessed/train_face.txt', 'a') as f:
+        for key, _ in train_data.items():
+            value = data[key]
+            value[0] = (value[0] - mean[0]) / std[0]
+            value[2] = (value[2] - mean[1]) / std[1]
+            f.write(str(key) + '\t' + value.__str__() + '\n')
+
+    with open('./data/preprocessed/test_face.txt', 'a') as f:
+        for key, _ in test_data.items():
+            value = data[key]
+            value[0] = (value[0] - mean[0]) / std[0]
+            value[2] = (value[2] - mean[1]) / std[1]
+            f.write(str(key) + '\t' + value.__str__() + '\n')
+    print("Face data preprocessed .")
 
 
 if __name__ == "__main__":

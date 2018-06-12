@@ -26,12 +26,17 @@ if __name__ == "__main__":
     for epoch in range(5):
         for i, data in enumerate(train_data):
             # prepare data and corresponding label(which is 'click')
-            user_id = data[0].cuda()
-            visual_feature = data[1].cuda()
-            click = data[2].cuda().float()
+            user_id = data['user_id'].cuda()
+            visual = data['visual'].cuda()
+            click = data['click'].cuda().float()
+
+            scale = data['scale'].cuda()
+            gender = data['gender'].cuda()
+            age = data['age']
+            perp = data['perp']
 
             # compute loss and backward gradient
-            pred = ifClick(user_id, visual_feature)
+            pred = ifClick(user_id, visual)
             loss = criterion(pred, click)
             ifClick.zero_grad()
             loss.backward()
