@@ -1,30 +1,66 @@
+import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
 import torch.optim as optim
 import torch.nn.functional as F
+import numpy as np
+from sklearn import metrics
 
-from model import IfClick
+import resource
+
+from model import IfClick, Ctr
 from dataset import UserInter
 import opts
 
 from misc.logger import Logger
 
 if __name__ == "__main__":
-    train_data = UserInter()
-    train_data = DataLoader(train_data, batch_size=128, shuffle=True, num_workers=8)
-    N = len(train_data)
-
     opt = opts.parse_opt()
-    ifClick = IfClick(opt=opt)
-    ifClick = ifClick.cuda()
+    # Fix: "RuntimeError: received 0 items of ancdata" when validating
+    # From: "https://github.com/fastai/fastai/issues/23"
+    rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
-    optimizer = optim.Adam(ifClick.parameters())
-    criterion = nn.BCELoss()
-    ifClick.train()
+    # load dataset, and split it into training dataset and validating dataset
+    dataset = UserInter()
+    N = len(dataset)
+    indices = list(range(N))
+    split = int(np.floor(opt.valid_size * N))
+
+    if opt.valid_shuffle:
+        # np.random.seed(opt.random_seed)
+        np.random.shuffle(indices)
+
+    train_idx, valid_idx = indices[split:], indices[:split]
+    train_sampler = SubsetRandomSampler(train_idx)
+    valid_sampler = SubsetRandomSampler(valid_idx)
+
+    train_loader = DataLoader(
+        dataset, batch_size=opt.batch_size, sampler=train_sampler,
+        num_workers=8, pin_memory=False,
+    )
+    valid_loader = DataLoader(
+        dataset, batch_size=opt.batch_size, sampler=valid_sampler,
+        num_workers=8, pin_memory=False,
+    )
+
+    print(len(train_loader))
+    print(len(valid_loader))
+
+    # ifClick = IfClick(opt=opt)
+    # ifClick = ifClick.cuda()
+    model = Ctr(opt=opt)
+    model = model.cuda()
+
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    criterion = nn.BCEWithLogitsLoss()
     logger = Logger('./logs/')
 
-    for epoch in range(5):
-        for i, data in enumerate(train_data):
+    for epoch in range(opt.num_epoches):
+        # training
+        model.train()
+        for i, data in enumerate(train_loader):
             # prepare data and corresponding label(which is 'click')
             user_id = data['user_id'].cuda()
             visual = data['visual'].cuda()
@@ -36,12 +72,32 @@ if __name__ == "__main__":
             perp = data['perp'].cuda()
 
             # compute loss and backward gradient
-            pred = ifClick(user_id, visual, scale, gender, age, perp)
+            pred = model(user_id, visual)
             loss = criterion(pred, click)
-            ifClick.zero_grad()
+
+            # backward
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if (i + 1) % 50 == 0:
-                print('Loss: {:.6f}'.format(loss.item()))
+            if i % 10 == 0:
+                print('[epoch {}, iter {}]\tLoss: {:.6f}'.format(epoch, i, loss.item()))
                 logger.scalar_summary('loss', loss.item(), i + epoch * N)
+
+        # Validating
+        model.eval()
+        y_, pred_ = [], []
+        for i, data in enumerate(valid_loader):
+            # prepare data and corresponding label(which is 'click')
+            user_id = data['user_id'].cuda()
+            visual = data['visual'].cuda()
+            click = data['click'].numpy()
+            pred = model(user_id, visual)
+            pred = F.sigmoid(pred)
+            pred_.append(pred.detach().cpu().numpy())
+            y_.append(click)
+        y_ = np.concatenate(y_, axis=0).squeeze(1)
+        pred_ = np.concatenate(pred_, axis=0).squeeze(1)
+        fpr, tpr, thresholds = metrics.roc_curve(y_, pred_, pos_label=2)
+        auc = metrics.auc(fpr, tpr)
+        logger.scalar_summary('auc', auc, epoch)

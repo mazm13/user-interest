@@ -17,7 +17,7 @@ class UserInter(Dataset):
     def __getitem__(self, item):
         data = self.data.loc[item]
         user_id = torch.from_numpy(np.array(data['user_id']))
-        click = torch.from_numpy(np.array(data['click']))
+        click = torch.from_numpy(np.array([data['click']]))
         photo_id = data['photo_id']
         photo_path = DATA_DIR + 'train/preliminary_visual_train/' + str(photo_id)
         visual_feature = torch.from_numpy(np.load(photo_path).squeeze())

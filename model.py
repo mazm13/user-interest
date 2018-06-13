@@ -22,23 +22,40 @@ class IfClick(nn.Module):
         super(IfClick, self).__init__()
         self.opt = opt
         self.user_embedder = nn.Embedding(opt.num_users, opt.user_dim)
-        self.visu_embedder = nn.Linear(opt.visual_dim, opt.user_dim)
+        self.visu_embedder = nn.Linear(opt.visual_dim, opt.embed_dim)
         self.face_embedder = FaceEmbedder(opt)
 
-        self.wh = nn.Linear(2 * opt.user_dim, opt.hidden_dim)
-        self.wp = nn.Linear(opt.hidden_dim, 1)
+        self.fc1 = nn.Linear(33, opt.hidden_dim)
+        self.fc2 = nn.Linear(opt.hidden_dim, opt.hidden_dim)
+        self.fc3 = nn.Linear(opt.hidden_dim, 1)
 
     def forward(self, user_id, visual, scale, gender, age, perp):
-        face_embedding = self.face_embedder(scale, gender, age, perp)
-        lvec = self.user_embedder(user_id)
-        rvec = self.visu_embedder(visual)
+        face = self.face_embedder(scale, gender, age, perp)  # batch_size * (2+2*embed_dim)
+        user = self.user_embedder(user_id)  # batch_size * user_dim
+        visual = self.visu_embedder(visual)  # batch_size * embed_dim
 
-        mul_d = torch.mul(lvec, rvec)
-        abs_d = torch.abs(torch.add(lvec, -rvec))
-        vec_d = torch.cat((mul_d, abs_d), dim=1)
+        x = torch.cat([user, visual, face], dim=1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        out = self.fc3(x)
+        return out
 
-        out = F.sigmoid(self.wh(vec_d))
-        out = F.sigmoid(self.wp(out))
-        # out = F.softmax(self.wp(out), dim=1)
-        # out = F.cosine_similarity(lvec, rvec, dim=2)
+
+class Ctr(nn.Module):
+    def __init__(self, opt):
+        super(Ctr, self).__init__()
+        self.opt = opt
+        self.user_embedder = nn.Embedding(opt.num_users, opt.user_dim)
+        self.visu_embedder = nn.Linear(opt.visual_dim, opt.embed_dim)
+        self.fc1 = nn.Linear(opt.user_dim + opt.embed_dim, opt.hidden_dim)
+        self.fc2 = nn.Linear(opt.hidden_dim, opt.hidden_dim)
+        self.fc3 = nn.Linear(opt.hidden_dim, 1)
+
+    def forward(self, user_id, visual):
+        user = self.user_embedder(user_id)
+        visual = self.visu_embedder(visual)
+        x = torch.cat([user, visual], dim=1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        out = self.fc3(x)
         return out
