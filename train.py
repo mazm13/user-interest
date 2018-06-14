@@ -8,6 +8,7 @@ import numpy as np
 from sklearn import metrics
 
 import resource
+import os
 
 from model import IfClick, Ctr
 from dataset import UserInter
@@ -45,7 +46,8 @@ if __name__ == "__main__":
         num_workers=8, pin_memory=False,
     )
 
-    print(len(train_loader))
+    M = len(train_loader)
+    print(M)
     print(len(valid_loader))
 
     # ifClick = IfClick(opt=opt)
@@ -80,9 +82,12 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-            if i % 10 == 0:
+            if i % 200 == 0:
                 print('[epoch {}, iter {}]\tLoss: {:.6f}'.format(epoch, i, loss.item()))
-                logger.scalar_summary('loss', loss.item(), i + epoch * N)
+                logger.scalar_summary('loss', loss.item(), i + epoch * M)
+
+        # save model
+        torch.save(model.state_dict(), os.path.join(opt.model_path, 'model-{}.ckpt'.format(epoch)))
 
         # Validating
         model.eval()
@@ -98,6 +103,5 @@ if __name__ == "__main__":
             y_.append(click)
         y_ = np.concatenate(y_, axis=0).squeeze(1)
         pred_ = np.concatenate(pred_, axis=0).squeeze(1)
-        fpr, tpr, thresholds = metrics.roc_curve(y_, pred_, pos_label=2)
-        auc = metrics.auc(fpr, tpr)
-        logger.scalar_summary('auc', auc, epoch)
+        auc_score = metrics.roc_auc_score(y_, pred_)
+        logger.scalar_summary('auc', auc_score, epoch)

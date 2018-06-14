@@ -20,5 +20,8 @@ def parse_opt():
     parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument('--num_epoches', type=int, default=10)
 
+    # misc options
+    parser.add_argument('--model_path', type=str, default='models')
+
     args = parser.parse_args()
     return args

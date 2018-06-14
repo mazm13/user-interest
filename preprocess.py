@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 import json
+import pickle
+import os
 
 DATA_DIR = './data/'
 RAW = ['user_id', 'click']
@@ -22,6 +24,9 @@ def initialize_data():
     le_user.fit(train_interaction['user_id'])
     num_users = len(le_user.classes_)
     print('UserId LabelEncoder Established, find {} users .'.format(num_users))
+
+    with open(os.path.join('models', 'le_user.param'), 'wb') as f:
+        pickle.dump(le_user, f)
 
     train_interaction['user_id'] = le_user.transform(train_interaction['user_id'])
     test_interaction['user_id'] = le_user.transform(test_interaction['user_id'])
