@@ -4,6 +4,10 @@ import pandas as pd
 import numpy as np
 from preprocess import face_reader
 
+import pickle
+from sklearn.preprocessing import LabelEncoder
+import os
+
 DATA_DIR = './data/'
 
 
@@ -33,6 +37,23 @@ class UserInter(Dataset):
 
         return {'user_id': user_id, 'visual': visual_feature, 'click': click, 'scale': scale, 'gender': gender,
                 'age': age, 'perp': perp}
+
+    def __len__(self):
+        return len(self.data)
+
+
+class UserTest(Dataset):
+    def __init__(self):
+        data = pd.read_csv('./data/preprocessed/test_interaction.csv')
+        self.data = data
+
+    def __getitem__(self, item):
+        data = self.data.loc[item]
+        user_id = torch.from_numpy(np.array(data['user_id']))
+        photo_id = data['photo_id']
+        photo_path = 'data/test/preliminary_visual_test/' + str(photo_id)
+        visual_feature = torch.from_numpy(np.load(photo_path).squeeze())
+        return user_id, visual_feature, photo_id
 
     def __len__(self):
         return len(self.data)

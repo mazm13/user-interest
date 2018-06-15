@@ -99,4 +99,4 @@ def initialize_face_data():
 
 
 if __name__ == "__main__":
-    initialize_face_data()
+    initialize_data()
