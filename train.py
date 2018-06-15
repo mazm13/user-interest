@@ -48,7 +48,8 @@ if __name__ == "__main__":
 
     M = len(train_loader)
     print(M)
-    print(len(valid_loader))
+    num_valid = len(valid_loader)
+    print(num_valid)
 
     # ifClick = IfClick(opt=opt)
     # ifClick = ifClick.cuda()
@@ -83,7 +84,7 @@ if __name__ == "__main__":
             optimizer.step()
 
             if i % 200 == 0:
-                print('[epoch {}, iter {}]\tLoss: {:.6f}'.format(epoch, i, loss.item()))
+                print('Epoch [{}/{}], Step[{}/{}], Loss: {:.6f}'.format(epoch, opt.num_epoches, i, M, loss.item()))
                 logger.scalar_summary('loss', loss.item(), i + epoch * M)
 
         # save model

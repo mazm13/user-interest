@@ -17,7 +17,7 @@ def parse_opt():
     parser.add_argument('--valid_shuffle', type=bool, default=True)
 
     # train super-parameters
-    parser.add_argument('--batch_size', type=int, default=1024)
+    parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument('--num_epoches', type=int, default=10)
 
     # misc options
