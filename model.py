@@ -49,7 +49,7 @@ class Ctr(nn.Module):
         self.visu_embedder = nn.Linear(opt.visual_dim, opt.embed_dim)
         self.fc1 = nn.Linear(opt.user_dim + opt.embed_dim, opt.hidden_dim)
         self.fc2 = nn.Linear(opt.hidden_dim, opt.hidden_dim)
-        self.fc3 = nn.Linear(opt.hidden_dim, 1)
+        self.fc3 = nn.Linear(opt.hidden_dim, 2)
 
     def forward(self, user_id, visual):
         user = self.user_embedder(user_id)
@@ -57,5 +57,5 @@ class Ctr(nn.Module):
         x = torch.cat([user, visual], dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        out = self.fc3(x)
+        out = F.softmax(self.fc3(x))
         return out

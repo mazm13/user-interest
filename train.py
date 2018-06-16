@@ -15,6 +15,7 @@ from dataset import UserInter
 import opts
 
 from misc.logger import Logger
+from misc.loss import VBCELoss, FocalLoss
 
 if __name__ == "__main__":
     opt = opts.parse_opt()
@@ -57,7 +58,8 @@ if __name__ == "__main__":
     model = model.cuda()
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCEWithLogitsLoss()
+    criterion = FocalLoss()
     logger = Logger('./logs/')
 
     for epoch in range(opt.num_epoches):
@@ -67,7 +69,7 @@ if __name__ == "__main__":
             # prepare data and corresponding label(which is 'click')
             user_id = data['user_id'].cuda()
             visual = data['visual'].cuda()
-            click = data['click'].cuda().float()
+            click = data['click'].cuda()
 
             scale = data['scale'].cuda()
             gender = data['gender'].cuda()
@@ -83,7 +85,7 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-            if i % 200 == 0:
+            if i % 100 == 0:
                 print('Epoch [{}/{}], Step[{}/{}], Loss: {:.6f}'.format(epoch, opt.num_epoches, i, M, loss.item()))
                 logger.scalar_summary('loss', loss.item(), i + epoch * M)
 

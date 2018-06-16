@@ -8,9 +8,9 @@ def parse_opt():
     parser.add_argument('--num_users', type=int, default=15140)
     parser.add_argument('--num_perps', type=int, default=80)
     parser.add_argument('--visual_dim', type=int, default=2048)
-    parser.add_argument('--embed_dim', type=int, default=16)
-    parser.add_argument('--user_dim', type=int, default=16)
-    parser.add_argument('--hidden_dim', type=int, default=32)
+    parser.add_argument('--embed_dim', type=int, default=256)
+    parser.add_argument('--user_dim', type=int, default=256)
+    parser.add_argument('--hidden_dim', type=int, default=256)
 
     # validation super-parameters
     parser.add_argument('--valid_size', type=float, default=0.05)
