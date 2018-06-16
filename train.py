@@ -16,6 +16,7 @@ import opts
 
 from misc.logger import Logger
 from misc.loss import VBCELoss, FocalLoss
+from misc import utils
 
 if __name__ == "__main__":
     opt = opts.parse_opt()
@@ -40,11 +41,11 @@ if __name__ == "__main__":
 
     train_loader = DataLoader(
         dataset, batch_size=opt.batch_size, sampler=train_sampler,
-        num_workers=8, pin_memory=False,
+        num_workers=16, pin_memory=False,
     )
     valid_loader = DataLoader(
         dataset, batch_size=opt.batch_size, sampler=valid_sampler,
-        num_workers=8, pin_memory=False,
+        num_workers=16, pin_memory=False,
     )
 
     M = len(train_loader)
@@ -57,12 +58,20 @@ if __name__ == "__main__":
     model = Ctr(opt=opt)
     model = model.cuda()
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    current_lr= 4e-4
+    optimizer = optim.Adam(model.parameters(), lr=current_lr)
+
     # criterion = nn.BCEWithLogitsLoss()
     criterion = FocalLoss()
     logger = Logger('./logs/')
 
     for epoch in range(opt.num_epoches):
+        # schedule learning rate
+        frac = epoch // 3
+        decay_factor = 0.8 ** frac
+        current_lr = current_lr * decay_factor
+        utils.set_lr(optimizer, current_lr)
+
         # training
         model.train()
         for i, data in enumerate(train_loader):
@@ -83,9 +92,10 @@ if __name__ == "__main__":
             # backward
             optimizer.zero_grad()
             loss.backward()
+            utils.clip_gradient(optimizer, 0.1)
             optimizer.step()
 
-            if i % 100 == 0:
+            if i % 50 == 0:
                 print('Epoch [{}/{}], Step[{}/{}], Loss: {:.6f}'.format(epoch, opt.num_epoches, i, M, loss.item()))
                 logger.scalar_summary('loss', loss.item(), i + epoch * M)
 
