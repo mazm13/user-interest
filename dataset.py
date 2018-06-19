@@ -51,7 +51,7 @@ class UserTest(Dataset):
         data = self.data.loc[item]
         user_id = torch.from_numpy(np.array(data['user_id']))
         photo_id = data['photo_id']
-        photo_path = 'data/test/preliminary_visual_test/' + str(photo_id)
+        photo_path = '../dataset/preliminary_visual_test/' + str(photo_id)
         visual_feature = torch.from_numpy(np.load(photo_path).squeeze())
         return user_id, visual_feature, photo_id
 

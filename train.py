@@ -9,6 +9,7 @@ from sklearn import metrics
 
 import resource
 import os
+import time
 
 from model import IfClick, Ctr
 from dataset import UserInter
@@ -58,7 +59,7 @@ if __name__ == "__main__":
     model = Ctr(opt=opt)
     model = model.cuda()
 
-    current_lr= 4e-4
+    current_lr = 4e-4
     optimizer = optim.Adam(model.parameters(), lr=current_lr)
 
     # criterion = nn.BCEWithLogitsLoss()
@@ -74,6 +75,8 @@ if __name__ == "__main__":
 
         # training
         model.train()
+        start = time.time()
+
         for i, data in enumerate(train_loader):
             # prepare data and corresponding label(which is 'click')
             user_id = data['user_id'].cuda()
@@ -95,9 +98,14 @@ if __name__ == "__main__":
             utils.clip_gradient(optimizer, 0.1)
             optimizer.step()
 
+            end = time.time()
+
             if i % 50 == 0:
-                print('Epoch [{}/{}], Step[{}/{}], Loss: {:.6f}'.format(epoch, opt.num_epoches, i, M, loss.item()))
+                print("iter {}/{} (epoch {}), train_loss = {:.6f}, time/batch = {:.3f}"
+                      .format(i, M, epoch, loss.item(), end - start))
                 logger.scalar_summary('loss', loss.item(), i + epoch * M)
+
+            start = time.time()
 
         # save model
         torch.save(model.state_dict(), os.path.join(opt.model_path, 'model-{}.ckpt'.format(epoch)))
@@ -111,10 +119,10 @@ if __name__ == "__main__":
             visual = data['visual'].cuda()
             click = data['click'].numpy()
             pred = model(user_id, visual)
-            pred = F.sigmoid(pred)
+            pred = pred[:, 1]
             pred_.append(pred.detach().cpu().numpy())
             y_.append(click)
         y_ = np.concatenate(y_, axis=0).squeeze(1)
-        pred_ = np.concatenate(pred_, axis=0).squeeze(1)
+        pred_ = np.concatenate(pred_, axis=0)
         auc_score = metrics.roc_auc_score(y_, pred_)
         logger.scalar_summary('auc', auc_score, epoch)

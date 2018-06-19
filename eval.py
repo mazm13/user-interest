@@ -16,7 +16,7 @@ from dataset import UserTest
 def results_to_file(luser_id, lphoto_id, lpred, le_user):
     luser_id = torch.cat(luser_id, dim=0).cpu().numpy()
     lphoto_id = torch.cat(lphoto_id, dim=0).cpu().numpy()
-    lpred = torch.cat(lpred, dim=0).squeeze(1).cpu().numpy()
+    lpred = torch.cat(lpred, dim=0).cpu().numpy()
 
     luser_id = le_user.inverse_transform(luser_id)
     with open(os.path.join('results', 'submit.txt'), 'a') as f:
@@ -30,12 +30,12 @@ if __name__ == "__main__":
         le_user = pickle.load(f)
 
     test_dataset = UserTest()
-    test_dataloader = DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=8)
+    test_dataloader = DataLoader(test_dataset, batch_size=2048, shuffle=False, num_workers=16)
     N = len(test_dataloader)
 
     model = Ctr(opt=opt).eval()
     model = model.cuda()
-    model.load_state_dict(torch.load(os.path.join('models', 'model-4.ckpt')))
+    model.load_state_dict(torch.load(os.path.join('models', 'model-5.ckpt')))
 
     # clean the submit file
     with open(os.path.join('results', 'submit.txt'), 'w') as f:
@@ -46,7 +46,8 @@ if __name__ == "__main__":
         user_id, visual_feature, photo_id = data
         user_id, visual_feature = user_id.cuda(), visual_feature.cuda()
         pred = model(user_id, visual_feature)
-        pred = F.sigmoid(pred)
+        # pred = F.sigmoid
+        pred = pred[:, 1]
 
         luser_id.append(user_id.detach())
         lphoto_id.append(photo_id.detach())
