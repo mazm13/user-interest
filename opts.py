@@ -4,16 +4,20 @@ import argparse
 def parse_opt():
     parser = argparse.ArgumentParser()
 
-    # model super-parameters
+    # fixed super-parameters
     parser.add_argument('--num_users', type=int, default=15140)
-    parser.add_argument('--num_perps', type=int, default=80)
+    parser.add_argument('--num_attributes', type=int, default=80)
+    parser.add_argument('--num_ages', type=int, default=40)
+
+    # model super-parameters
+    parser.add_argument('--face_k', type=int, default=32)
     parser.add_argument('--visual_dim', type=int, default=2048)
-    parser.add_argument('--embed_dim', type=int, default=512)
-    parser.add_argument('--user_dim', type=int, default=512)
-    parser.add_argument('--hidden_dim', type=int, default=512)
+    parser.add_argument('--embed_dim', type=int, default=32)
+    parser.add_argument('--user_dim', type=int, default=32)
+    parser.add_argument('--hidden_dim', type=int, default=256)
 
     # validation super-parameters
-    parser.add_argument('--valid_size', type=float, default=0.05)
+    parser.add_argument('--valid_size', type=float, default=0.1)
     parser.add_argument('--valid_shuffle', type=bool, default=True)
 
     # train super-parameters

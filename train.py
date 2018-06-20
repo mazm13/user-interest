@@ -54,9 +54,7 @@ if __name__ == "__main__":
     num_valid = len(valid_loader)
     print(num_valid)
 
-    # ifClick = IfClick(opt=opt)
-    # ifClick = ifClick.cuda()
-    model = Ctr(opt=opt)
+    model = IfClick(opt=opt)
     model = model.cuda()
 
     current_lr = 4e-4
@@ -80,16 +78,18 @@ if __name__ == "__main__":
         for i, data in enumerate(train_loader):
             # prepare data and corresponding label(which is 'click')
             user_id = data['user_id'].cuda()
+            hour = data['hour'].cuda()
             visual = data['visual'].cuda()
             click = data['click'].cuda()
 
             scale = data['scale'].cuda()
-            gender = data['gender'].cuda()
-            age = data['age'].cuda()
-            perp = data['perp'].cuda()
+            gender = data['gender'].cuda().squeeze(1)
+            age = data['age'].cuda().squeeze(1)
+            attribute = data['attribute'].cuda().squeeze(1)
 
             # compute loss and backward gradient
-            pred = model(user_id, visual)
+            pred = model(user_id=user_id, hour=hour, visual=visual, scale=scale, gender=gender, age=age,
+                         attribute=attribute)
             loss = criterion(pred, click)
 
             # backward
@@ -116,9 +116,17 @@ if __name__ == "__main__":
         for i, data in enumerate(valid_loader):
             # prepare data and corresponding label(which is 'click')
             user_id = data['user_id'].cuda()
+            hour = data['hour'].cuda()
             visual = data['visual'].cuda()
             click = data['click'].numpy()
-            pred = model(user_id, visual)
+
+            scale = data['scale'].cuda()
+            gender = data['gender'].cuda().squeeze(1)
+            age = data['age'].cuda().squeeze(1)
+            attribute = data['attribute'].cuda().squeeze(1)
+
+            pred = model(user_id=user_id, hour=hour, visual=visual, scale=scale, gender=gender, age=age,
+                         attribute=attribute)
             pred = pred[:, 1]
             pred_.append(pred.detach().cpu().numpy())
             y_.append(click)

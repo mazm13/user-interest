@@ -4,6 +4,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 import json
 import pickle
 import os
+import datetime
 
 DATA_DIR = './data/'
 RAW = ['user_id', 'click']
@@ -31,9 +32,10 @@ def initialize_data():
     train_interaction['user_id'] = le_user.transform(train_interaction['user_id'])
     test_interaction['user_id'] = le_user.transform(test_interaction['user_id'])
 
-    le_clic = LabelEncoder()
-    le_clic.fit(train_interaction['click'])
-    train_interaction['click'] = le_clic.transform(train_interaction['click'])
+    train_interaction['hour'] = train_interaction['time'].apply(
+        lambda x: datetime.datetime.fromtimestamp(x / 1000.).hour)
+    test_interaction['hour'] = test_interaction['time'].apply(
+        lambda x: datetime.datetime.fromtimestamp(x / 1000.).hour)
 
     train_interaction.to_csv('data/preprocessed/train_interaction.csv')
     test_interaction.to_csv('data/preprocessed/test_interaction.csv')
@@ -98,5 +100,21 @@ def initialize_face_data():
     print("Face data preprocessed .")
 
 
+def max_scale_face_data(mode):
+    data = face_reader('./data/%s/%s_face.txt' % (mode, mode))
+    for key, values in data.items():
+        # max scale index
+        idx = 0
+        for i, value in enumerate(values):
+            if value[0] > values[idx][0]:
+                idx = i
+        data[key] = values[idx]
+    with open('./data/preprocessed/%s_face.txt' % mode, 'w') as f:
+        for key, value in data.items():
+            f.write(str(key) + '\t' + value.__str__() + '\n')
+
+
 if __name__ == "__main__":
+    # max_scale_face_data('train')
+    # max_scale_face_data('test')
     initialize_data()
