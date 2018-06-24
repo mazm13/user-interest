@@ -11,7 +11,7 @@ import resource
 import os
 import time
 
-from model import IfClick, Ctr
+from model import IfClick, Ctr, DeepFM, DeepCross
 from dataset import UserInter
 import opts
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     num_valid = len(valid_loader)
     print(num_valid)
 
-    model = IfClick(opt=opt)
+    model = DeepCross(opt=opt)
     model = model.cuda()
 
     current_lr = 4e-4
@@ -98,14 +98,14 @@ if __name__ == "__main__":
             utils.clip_gradient(optimizer, 0.1)
             optimizer.step()
 
-            end = time.time()
-
             if i % 50 == 0:
-                print("iter {}/{} (epoch {}), train_loss = {:.6f}, time/batch = {:.3f}"
-                      .format(i, M, epoch, loss.item(), end - start))
+                end = time.time()
+                auc_score = metrics.roc_auc_score(click.detach().cpu().numpy(), pred.detach().cpu().numpy()[:, 1])
+                print("iter {}/{} (epoch {}), train_loss = {:.6f}, auc_score = {:.6f}, time/log = {:.3f}"
+                      .format(i, M, epoch, loss.item(), auc_score, end - start))
                 logger.scalar_summary('loss', loss.item(), i + epoch * M)
-
-            start = time.time()
+                logger.scalar_summary('train_auc_score', auc_score, i + epoch * M)
+                start = time.time()
 
         # save model
         torch.save(model.state_dict(), os.path.join(opt.model_path, 'model-{}.ckpt'.format(epoch)))
