@@ -114,6 +114,7 @@ class DeepCross(nn.Module):
     def __init__(self, opt):
         super(DeepCross, self).__init__()
         self.opt = opt
+        self.p = opt.dropout_prob
         self.hour_embedder = nn.Embedding(24, opt.hour_dim)
         self.user_embedder = nn.Embedding(opt.num_users, opt.user_dim)
         self.visu_embedder = nn.Linear(opt.visual_dim, opt.embed_dim)
@@ -128,13 +129,14 @@ class DeepCross(nn.Module):
         self.red_3 = nn.Linear(x_len, 1, bias=False)
         self.bias_3 = Parameter(torch.Tensor(x_len))
         # Deep part
+        self.bn_1 = nn.BatchNorm1d(x_len, affine=False)
         self.fc_1 = nn.Linear(x_len, opt.hidden_dim)
+        self.bn_2 = nn.BatchNorm1d(opt.hidden_dim, affine=False)
         self.fc_2 = nn.Linear(opt.hidden_dim, opt.hidden_dim)
+        self.bn_3 = nn.BatchNorm1d(opt.hidden_dim, affine=False)
         self.fc_3 = nn.Linear(opt.hidden_dim, opt.hidden_dim)
         # Classification part
         self.clf = nn.Linear(x_len + opt.hidden_dim, 2)
-        # self.clf = nn.Linear(opt.hidden_dim, 2)
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -159,15 +161,12 @@ class DeepCross(nn.Module):
 
         # Deep part
         h_1 = F.relu(self.fc_1(x_0))
-        h_2 = self.fc_2(h_1)
+        h_2 = F.relu(self.fc_2(h_1))
         h_3 = F.relu(self.fc_3(h_2))
 
         out = torch.cat([x_3, h_3], dim=1)
-        # print(out.size())
         out = self.clf(out)
-        # print(out.size())
         out = F.softmax(out, dim=1)
-        # print(out.size())
         return out
 
 
@@ -181,7 +180,7 @@ class Ctr(nn.Module):
         self.fc2 = nn.Linear(opt.hidden_dim, opt.hidden_dim)
         self.fc3 = nn.Linear(opt.hidden_dim, 2)
 
-    def forward(self, user_id, visual):
+    def forward(self, user_id, hour, visual, scale, gender, age, attribute):
         user = self.user_embedder(user_id)
         visual = self.visu_embedder(visual)
         x = torch.cat([user, visual], dim=1)

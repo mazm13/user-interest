@@ -16,7 +16,7 @@ from dataset import UserInter
 import opts
 
 from misc.logger import Logger
-from misc.loss import VBCELoss, FocalLoss
+from misc.loss import LogLoss, FocalLoss
 from misc import utils
 
 if __name__ == "__main__":
@@ -27,47 +27,43 @@ if __name__ == "__main__":
     resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
     # load dataset, and split it into training dataset and validating dataset
-    dataset = UserInter()
-    N = len(dataset)
-    indices = list(range(N))
-    split = int(np.floor(opt.valid_size * N))
+    datasize = 20854344
+    shuffled_index = np.arange(datasize)
+    np.random.shuffle(shuffled_index)
+    bound = int(np.floor(datasize * (1 - opt.valid_size)))
+    shuffled_train = shuffled_index[:bound]
+    shuffled_valid = shuffled_index[bound:]
 
-    if opt.valid_shuffle:
-        # np.random.seed(opt.random_seed)
-        np.random.shuffle(indices)
+    train_data = UserInter(shuffled_train)
+    valid_data = UserInter(shuffled_valid)
 
-    train_idx, valid_idx = indices[split:], indices[:split]
-    train_sampler = SubsetRandomSampler(train_idx)
-    valid_sampler = SubsetRandomSampler(valid_idx)
-
-    train_loader = DataLoader(
-        dataset, batch_size=opt.batch_size, sampler=train_sampler,
-        num_workers=16, pin_memory=False,
-    )
-    valid_loader = DataLoader(
-        dataset, batch_size=opt.batch_size, sampler=valid_sampler,
-        num_workers=16, pin_memory=False,
-    )
+    train_loader = DataLoader(train_data, batch_size=opt.batch_size, shuffle=True, num_workers=16)
+    valid_loader = DataLoader(valid_data, batch_size=opt.batch_size, shuffle=False, num_workers=16)
 
     M = len(train_loader)
-    print(M)
+    print("train iters number: %d" % M)
     num_valid = len(valid_loader)
-    print(num_valid)
+    print("valid iters number: %d" % num_valid)
 
     model = DeepCross(opt=opt)
     model = model.cuda()
 
-    current_lr = 4e-4
+    if opt.loader:
+        print("load checkpoint file .")
+        model.load_state_dict(torch.load(os.path.join('models', 'model-1.ckpt')))
+
+    current_lr = 1e-3
     optimizer = optim.Adam(model.parameters(), lr=current_lr)
 
     # criterion = nn.BCEWithLogitsLoss()
     criterion = FocalLoss()
+    # criterion = nn.BCELoss()
     logger = Logger('./logs/')
 
-    for epoch in range(opt.num_epoches):
+    for epoch in range(2, opt.num_epoches):
         # schedule learning rate
-        frac = epoch // 3
-        decay_factor = 0.8 ** frac
+        frac = epoch // 2
+        decay_factor = 0.9 ** frac
         current_lr = current_lr * decay_factor
         utils.set_lr(optimizer, current_lr)
 
@@ -133,4 +129,5 @@ if __name__ == "__main__":
         y_ = np.concatenate(y_, axis=0).squeeze(1)
         pred_ = np.concatenate(pred_, axis=0)
         auc_score = metrics.roc_auc_score(y_, pred_)
+        print("epoch {}, auc = {:.6f}".format(epoch, auc_score))
         logger.scalar_summary('auc', auc_score, epoch)

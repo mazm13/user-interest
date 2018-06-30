@@ -2,20 +2,31 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
+import h5py
+import pickle
 from preprocess import face_reader
 
 DATA_DIR = './data/'
 
 
 class UserInter(Dataset):
-    def __init__(self):
+    def __init__(self, indices):
         data = pd.read_csv(DATA_DIR + 'preprocessed/train_interaction.csv')
-        self.data = data
+        self.data = data.iloc[indices, :]
         face_data = face_reader(DATA_DIR + 'preprocessed/train_face.txt')
         self.face_data = face_data
+        """
+        file = h5py.File('../dataset/visual_train.h5', 'r')
+        self.visual_data = file['data']
+        with open('models/le_photo.param', 'rb') as f:
+            le = pickle.load(f)
+        photo_ids = data['photo_id'].unique()
+        photo_dict = dict(zip(photo_ids, le.transform(photo_ids)))
+        self.photo_dict = photo_dict
+        """
 
     def __getitem__(self, item):
-        data = self.data.loc[item]
+        data = self.data.iloc[item, :]
         user_id = torch.from_numpy(np.array(data['user_id']))
         hour = torch.LongTensor(np.array(data['hour']))
         click = torch.LongTensor(np.array([data['click']]))
